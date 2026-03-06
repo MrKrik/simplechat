@@ -2,6 +2,7 @@ package server
 
 import (
 	"bufio"
+	"container/ring"
 	"context"
 	"fmt"
 	"log"
@@ -23,20 +24,22 @@ type Peer struct {
 }
 
 type Server struct {
-	Address      string
-	Listener     net.Listener
-	messagesChan chan Message
-	clients      map[net.Conn]*Peer
-	deadClients  []net.Conn
-	mu           sync.RWMutex
+	Address       string
+	Listener      net.Listener
+	messagesChan  chan Message
+	clients       map[net.Conn]*Peer
+	deadClients   []net.Conn
+	mu            sync.RWMutex
+	messageBuffer *ring.Ring
 }
 
 func NewServer(address string) *Server {
 	return &Server{
-		messagesChan: make(chan Message, 100),
-		Address:      address,
-		clients:      make(map[net.Conn]*Peer),
-		deadClients:  make([]net.Conn, 0),
+		messagesChan:  make(chan Message, 100),
+		Address:       address,
+		clients:       make(map[net.Conn]*Peer),
+		deadClients:   make([]net.Conn, 0),
+		messageBuffer: ring.New(10),
 	}
 }
 func (s *Server) Start() error {
@@ -97,12 +100,22 @@ func (s *Server) registerPeer(conn net.Conn) {
 	s.clients[conn] = peer
 }
 
+func (s *Server) addHistory(msg Message) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.messageBuffer.Value = msg
+	s.messageBuffer = s.messageBuffer.Next()
+
+}
+
 func (s *Server) Broadcast(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case msg := <-s.messagesChan:
+			go s.addHistory(msg)
 			s.mu.RLock()
 			message := fmt.Sprintf("%s: %s\n", msg.Author, msg.Text)
 			for _, client := range s.clients {
@@ -122,7 +135,7 @@ func (s *Server) writeInConnection(conn net.Conn, message string) {
 	_, err := conn.Write([]byte(message))
 	if err != nil {
 		log.Printf("Failed write message: %v", err)
-		s.deadClients = append(s.deadClients, conn) //при ошибке добавляем в срез
+		s.deadClients = append(s.deadClients, conn)
 	}
 }
 
@@ -134,14 +147,28 @@ func (s *Server) unregisterPeer(conn net.Conn) {
 	log.Printf("Client disconnected: %s", conn.RemoteAddr().String())
 }
 
+func (s *Server) sendHistory(conn net.Conn) {
+	history := s.messageBuffer
+	if history.Len() != 0 {
+		history.Do(func(a any) {
+			if a == nil {
+				return
+			}
+			message := fmt.Sprintf("%s: %s\n", a.(Message).Author, a.(Message).Text)
+			s.writeInConnection(conn, message)
+		})
+	}
+}
+
 func (s *Server) handleConn(conn net.Conn) {
 	defer conn.Close()
 
 	s.registerPeer(conn)
 	reader := bufio.NewReader(conn)
 
+	go s.sendHistory(conn)
 	for {
-		n, err := reader.ReadString('\n')
+		message, err := reader.ReadString('\n')
 		if err != nil {
 			log.Printf("Connection error: %v", err)
 			return
@@ -149,7 +176,7 @@ func (s *Server) handleConn(conn net.Conn) {
 
 		msg := &Message{
 			Author: conn.RemoteAddr().String(),
-			Text:   n,
+			Text:   message,
 		}
 		s.messagesChan <- *msg
 	}
