@@ -23,9 +23,14 @@ type Peer struct {
 	ConnectedAt time.Time
 }
 
+type Chat struct {
+	messagesChan chan Message
+}
+
 type Server struct {
 	Address       string
 	Listener      net.Listener
+	Chat_list     []string
 	messagesChan  chan Message
 	clients       map[net.Conn]*Peer
 	deadClients   []net.Conn
