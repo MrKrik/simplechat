@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"bufio"
@@ -22,7 +22,7 @@ type Client struct {
 	messageChan chan Message
 }
 
-func newClient(name string) *Client {
+func NewClient(name string) *Client {
 	return &Client{
 		Name:        name,
 		messageChan: make(chan Message, 50),
@@ -31,7 +31,7 @@ func newClient(name string) *Client {
 
 func (c *Client) Start() error {
 	var err error
-	c.Connection, err = net.Dial("tcp", "chat-bee-bot.db-msk0.amvera.tech:27017")
+	c.Connection, err = net.Dial("tcp", "localhost:3000")
 	if err != nil {
 		log.Println("Ошибка подключения:", err)
 		return err
@@ -87,8 +87,4 @@ func (c *Client) writeInConnection(message string) {
 	if err != nil {
 		log.Printf("Failed write message: %v", err)
 	}
-}
-func main() {
-	cl := newClient("anton")
-	cl.Start()
 }
