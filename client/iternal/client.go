@@ -5,10 +5,12 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"github.com/coder/websocket"
 )
 
 type Message struct {
@@ -17,27 +19,37 @@ type Message struct {
 }
 
 type Client struct {
-	Name        string
-	Connection  net.Conn
+	Connection  *websocket.Conn
 	messageChan chan Message
 }
 
 func NewClient(name string) *Client {
 	return &Client{
-		Name:        name,
 		messageChan: make(chan Message, 50),
 	}
 }
 
 func (c *Client) Start() error {
 	var err error
-	c.Connection, err = net.Dial("tcp", "localhost:3000")
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	c.Connection, _, err = websocket.Dial(ctx, "ws://localhost:8080/ws", nil)
+	if err != nil {
+		log.Fatalf("Не удалось подключиться: %v", err)
+	}
+
 	if err != nil {
 		log.Println("Ошибка подключения:", err)
 		return err
 	}
-	log.Println("Подключено к", c.Connection.RemoteAddr())
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+
+	if err != nil {
+		fmt.Println("Authorization failed", err)
+		return err
+	}
+	ctx, cancel = signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		for {
 			select {
@@ -50,7 +62,7 @@ func (c *Client) Start() error {
 	go c.handleMessage(ctx)
 	defer func() {
 		cancel()
-		c.Connection.Close()
+		c.Connection.Close(websocket.StatusNormalClosure, "work end")
 	}()
 	c.Stop(ctx)
 	return nil
@@ -59,7 +71,7 @@ func (c *Client) Start() error {
 func (c *Client) Stop(ctx context.Context) {
 	<-ctx.Done()
 	log.Println("Exit")
-	c.Connection.Close()
+	c.Connection.Close(websocket.StatusNormalClosure, "work end")
 }
 
 func (c *Client) handleKeyboard(ctx context.Context) {
@@ -71,7 +83,8 @@ func (c *Client) handleKeyboard(ctx context.Context) {
 }
 
 func (c *Client) handleMessage(ctx context.Context) {
-	reader := bufio.NewReader(c.Connection)
+	_, IOreader, _ := c.Connection.Reader(context.TODO())
+	reader := bufio.NewReader(IOreader)
 	for {
 		message, err := reader.ReadString('\n')
 		if err != nil {
@@ -83,8 +96,21 @@ func (c *Client) handleMessage(ctx context.Context) {
 }
 
 func (c *Client) writeInConnection(message string) {
-	_, err := c.Connection.Write([]byte(message))
+	err := c.Connection.Write(context.TODO(), websocket.MessageText, []byte(message))
 	if err != nil {
 		log.Printf("Failed write message: %v", err)
 	}
+}
+
+func (c *Client) GetToken() string {
+	return "f"
+}
+
+func getLoginAndPassword() string {
+	var login, password string
+	fmt.Println("Login: ")
+	fmt.Scan(&login)
+	fmt.Println("Password: ")
+	fmt.Scan(&password)
+	return login + " " + password
 }
