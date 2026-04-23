@@ -129,6 +129,13 @@ func TestLogin_FailCases(t *testing.T) {
 			appID:       emptyAppID,
 			expectedErr: "app_id is required",
 		},
+		{
+			name:        "Invisible rune",
+			login:       generateLogin(passDefaultLen),
+			password:    generatePassword(passDefaultLen) + "ㅤㅤ",
+			appID:       emptyAppID,
+			expectedErr: "invalid login or password",
+		},
 	}
 
 	for _, tt := range tests {
