@@ -34,9 +34,10 @@ func (c *Client) Login(login string, password string) (token string, err error) 
 	res, err := c.api.Login(context.Background(), &auth1.LoginRequest{
 		Login:    login,
 		Password: password,
+		AppId:    1,
 	})
 	if err != nil {
-		return "", nil
+		return err.Error(), nil
 	}
 	return res.GetToken(), nil
 }

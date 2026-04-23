@@ -4,13 +4,13 @@ go 1.24.2
 
 require (
 	github.com/MrKrik/protos v0.0.4
+	github.com/go-chi/chi/v5 v5.2.5
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	google.golang.org/grpc v1.80.0
 )
 
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
-	github.com/go-chi/chi/v5 v5.2.5 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect

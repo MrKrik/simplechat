@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	grpc "tcp-server/iternal/grpc/auth"
+	grpc "tcp-server/internal/grpc/auth"
 )
 
 func Login(client *grpc.Client) http.HandlerFunc {
@@ -17,9 +17,9 @@ func Login(client *grpc.Client) http.HandlerFunc {
 		}
 		login, password, _ := strings.Cut(request, " ")
 		tk, _ := client.Login(login, password)
+		fmt.Println(tk)
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(200)
-		json.NewEncoder(w).Encode(map[string]string{"token": tk})
+		json.NewEncoder(w).Encode(tk)
 	}
 }
 

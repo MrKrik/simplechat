@@ -2,9 +2,12 @@ package client
 
 import (
 	"bufio"
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -21,6 +24,7 @@ type Message struct {
 type Client struct {
 	Connection  *websocket.Conn
 	messageChan chan Message
+	Token       string
 }
 
 func NewClient(name string) *Client {
@@ -103,7 +107,26 @@ func (c *Client) writeInConnection(message string) {
 }
 
 func (c *Client) GetToken() string {
-	return "f"
+	var token string
+
+	msg := getLoginAndPassword()
+	data := msg
+
+	// 2. Кодируем в JSON
+	jsonData, _ := json.Marshal(data)
+
+	// 3. Отправляем POST запрос
+	resp, err := http.Post("http://localhost:8082/login", "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close() // Обязательно закрываем тело ответа
+	json.NewDecoder(resp.Body).Decode(&token)
+	return token
+}
+
+func (c *Client) SetToken() {
+	c.Token = c.GetToken()
 }
 
 func getLoginAndPassword() string {
