@@ -24,7 +24,7 @@ type Message struct {
 type Client struct {
 	Connection  *websocket.Conn
 	messageChan chan Message
-	Token       string
+	token       string
 }
 
 func NewClient(name string) *Client {
@@ -35,6 +35,15 @@ func NewClient(name string) *Client {
 
 func (c *Client) Start() error {
 	var err error
+
+	for {
+		if c.token == "" {
+			c.SetToken()
+
+		} else {
+			break
+		}
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
@@ -106,27 +115,32 @@ func (c *Client) writeInConnection(message string) {
 	}
 }
 
-func (c *Client) GetToken() string {
+func (c *Client) getToken() string {
 	var token string
 
 	msg := getLoginAndPassword()
 	data := msg
 
-	// 2. Кодируем в JSON
 	jsonData, _ := json.Marshal(data)
 
-	// 3. Отправляем POST запрос
 	resp, err := http.Post("http://localhost:8082/login", "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		panic(err)
+		fmt.Println("Error: ", err)
 	}
-	defer resp.Body.Close() // Обязательно закрываем тело ответа
+	defer resp.Body.Close()
+
 	json.NewDecoder(resp.Body).Decode(&token)
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		fmt.Println("Error:", token)
+		return ""
+	}
+
 	return token
 }
 
 func (c *Client) SetToken() {
-	c.Token = c.GetToken()
+	c.token = c.getToken()
 }
 
 func getLoginAndPassword() string {

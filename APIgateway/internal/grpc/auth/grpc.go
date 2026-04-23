@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	auth1 "github.com/MrKrik/protos/gen/go/auth"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 type Client struct {
@@ -30,19 +33,27 @@ func New(
 	}, nil
 }
 
-func (c *Client) Login(login string, password string) (token string, err error) {
+func (c *Client) Login(login string, password string, log *slog.Logger) (token string, errMessage string) {
 	res, err := c.api.Login(context.Background(), &auth1.LoginRequest{
 		Login:    login,
 		Password: password,
 		AppId:    1,
 	})
-	if err != nil {
-		return err.Error(), nil
+	st, ok := status.FromError(err)
+	if ok {
+		switch st.Code() {
+		case codes.InvalidArgument:
+			log.Error(err.Error())
+			return "", st.Message()
+		case codes.Internal:
+			log.Error(err.Error())
+			return "", st.Message()
+		}
 	}
-	return res.GetToken(), nil
+	return res.GetToken(), ""
 }
 
-func (c *Client) Register(login string, password string) (err error) {
+func (c *Client) Register(login string, password string, log *slog.Logger) (err error) {
 	_, err = c.api.Register(context.Background(), &auth1.RegisterRequest{
 		Login:    login,
 		Password: password,

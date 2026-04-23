@@ -41,8 +41,8 @@ func main() {
 	router.Use(middleware.RequestID)
 	router.Use(middleware.Logger)
 
-	router.Post("/login", auth.Login(authclient))
-	router.Post("/register", auth.Register(authclient))
+	router.Post("/login", auth.Login(authclient, log))
+	router.Post("/register", auth.Register(authclient, log))
 
 	// router.Use(mwLogerr.New(log))
 
