@@ -39,7 +39,7 @@ type UserProvider interface {
 }
 
 type AppProvider interface {
-	App(ctx context.Context, appID int64) (models.App, error)
+	App(ctx context.Context, appID int) (models.App, error)
 }
 
 func New(
@@ -87,7 +87,7 @@ func (a *Auth) RegisterNewUser(ctx context.Context, login string, password strin
 	return id, nil
 }
 
-func (a *Auth) Login(ctx context.Context, login string, password string, appID int64) (string, error) {
+func (a *Auth) Login(ctx context.Context, login string, password string, appID int) (string, error) {
 	const op = "auth.Login"
 
 	log := a.log.With(

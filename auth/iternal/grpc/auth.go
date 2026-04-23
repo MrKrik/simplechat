@@ -2,6 +2,10 @@ package authgrpc
 
 import (
 	"context"
+	"errors"
+
+	"auth/iternal/services/auth"
+	"auth/iternal/storage"
 
 	auth1 "github.com/MrKrik/protos/gen/go/auth"
 	"google.golang.org/grpc"
@@ -52,6 +56,9 @@ func (s *serverAPI) Login(
 
 	token, err := s.auth.Login(ctx, req.GetLogin(), req.GetPassword(), int(req.GetAppId()))
 	if err != nil {
+		if errors.Is(err, auth.ErrInvalidCredentials) {
+			return nil, status.Error(codes.InvalidArgument, "invalid login or password")
+		}
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
@@ -75,10 +82,9 @@ func (s *serverAPI) Register(
 
 	uid, err := s.auth.RegisterNewUser(ctx, req.GetLogin(), req.GetPassword())
 	if err != nil {
-		// TODO: ...
-		// if errors.Is(err, storage.ErrUserExists) {
-		// 	return nil, status.Error(codes.AlreadyExists, "user already exists")
-		// }
+		if errors.Is(err, storage.ErrUserExists) {
+			return nil, status.Error(codes.AlreadyExists, "user already exists")
+		}
 
 		return nil, status.Error(codes.Internal, "failed to register user")
 	}
