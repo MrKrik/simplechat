@@ -73,7 +73,7 @@ func (s *serverAPI) Register(
 ) (*auth1.RegisterResponse, error) {
 	// TODO: validation v10
 	if req.Login == "" {
-		return nil, status.Error(codes.InvalidArgument, "email is required")
+		return nil, status.Error(codes.InvalidArgument, "login is required")
 	}
 
 	if req.Password == "" {
