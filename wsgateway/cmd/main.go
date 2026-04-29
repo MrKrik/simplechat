@@ -2,50 +2,49 @@ package main
 
 import (
 	"log"
+	"math/rand"
 	"net/http"
 	"time"
+	"wsgateway/iternal/hub"
+	chub "wsgateway/iternal/hub"
 
 	"github.com/coder/websocket"
 )
 
-func echoServer(w http.ResponseWriter, r *http.Request) {
-	// Принимаем соединение (Upgrade)
-	// Options позволяют настроить сжатие или проверку Origin
-	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-		InsecureSkipVerify: true, // Для разработки (аналог CheckOrigin)
-	})
-	if err != nil {
-		log.Printf("Ошибка приёма соединения: %v", err)
-		return
-	}
-	defer conn.Close(websocket.StatusInternalError, "the sky is falling")
-
-	ctx := r.Context()
-
-	for {
-		// Чтение сообщения
-		_, message, err := conn.Read(ctx)
-		if err != nil {
-			log.Printf("Ошибка чтения: %v", err)
-			break
-		}
-
-		log.Printf("Получено: %s", message)
-
-	}
-
-	conn.Close(websocket.StatusNormalClosure, "")
-}
-
 func main() {
-	http.HandleFunc("/ws", echoServer)
+	hub := chub.NewHub()
 
-	server := &http.Server{
-		Addr:         ":8080",
-		ReadTimeout:  time.Second * 10,
-		WriteTimeout: time.Second * 10,
-	}
+	hub.Rooms["general"] = []string{"user1", "user2"}
+
+	go hub.Run()
+
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		serveWs(hub, w, r)
+	})
 
 	log.Println("Сервер запущен на :8080")
-	log.Fatal(server.ListenAndServe())
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+func serveWs(hub *hub.Hub, w http.ResponseWriter, r *http.Request) {
+
+	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+		InsecureSkipVerify: true,
+	})
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("New user", r.RemoteAddr, r.URL.Query().Get("userId"))
+	client := &chub.Client{
+		UserID:     r.URL.Query().Get("userId"), // Передаем в URL: ?userId=user1
+		ConnID:     string(rand.Int31()),
+		Conn:       conn,
+		Send:       make(chan []byte, 256),
+		Hub:        hub,
+		LastActive: time.Now(),
+	}
+	hub.Register <- client
+
+	go client.WritePump()
+	go client.ReadPump()
 }

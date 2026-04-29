@@ -34,11 +34,14 @@ func Register(client *grpc.Client, log *slog.Logger) http.HandlerFunc {
 		var request string
 		err := json.NewDecoder(r.Body).Decode(&request)
 		if err != nil {
-			fmt.Println("f")
+			fmt.Println("Error decode reigster json")
 		}
 		login, password, _ := strings.Cut(request, " ")
-		err = client.Register(login, password, log)
-		if err != nil {
+		errMSG := client.Register(login, password, log)
+		if errMSG != "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(errMSG)
 			return
 		}
 		w.WriteHeader(200)

@@ -1,4 +1,4 @@
-package client
+package hub
 
 import (
 	"bufio"
@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+	"github.com/coder/websocket/wsjson"
 )
 
 type Message struct {
@@ -25,41 +26,49 @@ type Client struct {
 	Connection  *websocket.Conn
 	messageChan chan Message
 	token       string
+	Room_id     string
+}
+
+type ClientMessage struct {
+	Type    string          `json:"type"`
+	Payload json.RawMessage `json:"payload"`
+}
+
+type ChatPayload struct {
+	Room_id string `json:"room_id"`
+	Text    string `json:"text"`
 }
 
 func NewClient(name string) *Client {
 	return &Client{
 		messageChan: make(chan Message, 50),
+		Room_id:     "general",
 	}
 }
 
 func (c *Client) Start() error {
 	var err error
 
-	for {
-		if c.token == "" {
-			c.SetToken()
+	// for {
+	// 	if c.token == "" {
+	// 		c.SetToken()
 
-		} else {
-			break
-		}
-	}
+	// 	} else {
+	// 		break
+	// 	}
+	// }
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	c.Connection, _, err = websocket.Dial(ctx, "ws://localhost:8080/ws", nil)
-	if err != nil {
-		log.Fatalf("Не удалось подключиться: %v", err)
-	}
+	var id string
+	fmt.Scan(&id)
+	var url string
+	url = fmt.Sprintf("ws://localhost:8080/ws?userId=%s", id)
 
+	c.Connection, _, err = websocket.Dial(ctx, url, nil)
 	if err != nil {
-		log.Println("Ошибка подключения:", err)
-		return err
-	}
-
-	if err != nil {
-		fmt.Println("Authorization failed", err)
+		fmt.Println("Authorization failed:", err)
 		return err
 	}
 	ctx, cancel = signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -96,20 +105,36 @@ func (c *Client) handleKeyboard(ctx context.Context) {
 }
 
 func (c *Client) handleMessage(ctx context.Context) {
-	_, IOreader, _ := c.Connection.Reader(context.TODO())
-	reader := bufio.NewReader(IOreader)
 	for {
-		message, err := reader.ReadString('\n')
+		_, message, err := c.Connection.Read(context.TODO())
+
 		if err != nil {
 			log.Printf("Connection error: %v", err)
 			return
 		}
-		fmt.Println(message)
+
+		message = bytes.TrimSpace(message)
+
+		if len(message) > 0 {
+			fmt.Println(string(message))
+		}
 	}
 }
 
 func (c *Client) writeInConnection(message string) {
-	err := c.Connection.Write(context.TODO(), websocket.MessageText, []byte(message))
+
+	payloadData := ChatPayload{
+		Room_id: "general",
+		Text:    message,
+	}
+
+	payloadBytes, _ := json.Marshal(payloadData)
+
+	msg := ClientMessage{
+		Type:    "chat_message",
+		Payload: json.RawMessage(payloadBytes),
+	}
+	err := wsjson.Write(context.TODO(), c.Connection, msg)
 	if err != nil {
 		log.Printf("Failed write message: %v", err)
 	}
@@ -126,6 +151,7 @@ func (c *Client) getToken() string {
 	resp, err := http.Post("http://localhost:8082/login", "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		fmt.Println("Error: ", err)
+		return ""
 	}
 	defer resp.Body.Close()
 

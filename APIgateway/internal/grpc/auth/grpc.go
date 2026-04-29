@@ -53,13 +53,27 @@ func (c *Client) Login(login string, password string, log *slog.Logger) (token s
 	return res.GetToken(), ""
 }
 
-func (c *Client) Register(login string, password string, log *slog.Logger) (err error) {
-	_, err = c.api.Register(context.Background(), &auth1.RegisterRequest{
+func (c *Client) Register(login string, password string, log *slog.Logger) (errMessage string) {
+	_, err := c.api.Register(context.Background(), &auth1.RegisterRequest{
 		Login:    login,
 		Password: password,
 	})
-	if err != nil {
-		return nil
+	st, ok := status.FromError(err)
+	if ok {
+		switch st.Code() {
+
+		case codes.InvalidArgument:
+			log.Error(err.Error())
+			return st.Message()
+
+		case codes.Internal:
+			log.Error(err.Error())
+			return st.Message()
+
+		case codes.AlreadyExists:
+			log.Error(err.Error())
+			return st.Message()
+		}
 	}
-	return nil
+	return ""
 }

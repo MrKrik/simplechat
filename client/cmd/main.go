@@ -6,6 +6,5 @@ import (
 
 func main() {
 	cl := client.NewClient("anton")
-	cl.SetToken()
 	cl.Start()
 }
