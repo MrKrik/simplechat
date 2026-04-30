@@ -14,6 +14,7 @@ type Config struct {
 	GRPC           GRPCConfig `yaml:"grpc"`
 	MigrationsPath string
 	TokenTTL       time.Duration `yaml:"token_ttl" env-default:"1h"`
+	ChatTokenTTL   time.Duration `yaml:"chat_token_ttl" env-default:"10s"`
 }
 
 type GRPCConfig struct {

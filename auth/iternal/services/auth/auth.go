@@ -15,11 +15,12 @@ import (
 )
 
 type Auth struct {
-	log         *slog.Logger
-	usrSaver    UserSaver
-	usrProvider UserProvider
-	appProvider AppProvider
-	tokenTTL    time.Duration
+	log          *slog.Logger
+	usrSaver     UserSaver
+	usrProvider  UserProvider
+	appProvider  AppProvider
+	tokenTTL     time.Duration
+	ChatTokenTTL time.Duration
 }
 
 var (
@@ -48,13 +49,15 @@ func New(
 	userProvider UserProvider,
 	appProvider AppProvider,
 	tokenTTL time.Duration,
+	chatTokenTTL time.Duration,
 ) *Auth {
 	return &Auth{
-		usrSaver:    userSaver,
-		usrProvider: userProvider,
-		log:         log,
-		appProvider: appProvider,
-		tokenTTL:    tokenTTL,
+		usrSaver:     userSaver,
+		usrProvider:  userProvider,
+		log:          log,
+		appProvider:  appProvider,
+		tokenTTL:     tokenTTL,
+		ChatTokenTTL: chatTokenTTL,
 	}
 }
 
@@ -129,6 +132,38 @@ func (a *Auth) Login(ctx context.Context, login string, password string, appID i
 
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
+
+	return token, nil
+}
+
+func (a *Auth) GetChatToken(ctx context.Context, authToken string) (token string, err error) {
+	const op = "auth.Login"
+
+	log := a.log.With(
+		slog.String("op", op),
+		slog.String("authToken", authToken),
+	)
+
+	app, err := a.appProvider.App(ctx, 1)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	log.Info("get login from JWT token")
+
+	login, _, err := jwt.GetLoginFromToken(authToken, app.Secret)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	log.Info("generate chat token")
+
+	token, err = jwt.NewChatToken(login, app, a.ChatTokenTTL)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	log.Info("generate chat token successfully")
 
 	return token, nil
 }

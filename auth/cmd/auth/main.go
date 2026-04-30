@@ -22,7 +22,7 @@ func main() {
 	log.Info("Starting aplication", slog.Any("config", cfg))
 
 	// init app
-	application := app.New(log, cfg.GRPC.Port, cfg.StoragePath, cfg.TokenTTL)
+	application := app.New(log, cfg.GRPC.Port, cfg.StoragePath, cfg.TokenTTL, cfg.ChatTokenTTL)
 
 	go application.GRPCSrv.MustRun()
 

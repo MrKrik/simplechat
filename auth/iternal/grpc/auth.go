@@ -25,6 +25,10 @@ type Auth interface {
 		login string,
 		password string,
 	) (user int64, err error)
+	GetChatToken(
+		ctx context.Context,
+		token string,
+	) (chatToken string, err error)
 }
 
 type serverAPI struct {
@@ -90,4 +94,17 @@ func (s *serverAPI) Register(
 	}
 
 	return &auth1.RegisterResponse{UserId: uid}, nil
+}
+
+func (s *serverAPI) GetChatToken(ctx context.Context,
+	req *auth1.GetChatTokenRequest,
+) (*auth1.GetChatTokenResponse, error) {
+	if req.AuthToken == "" {
+		return nil, status.Error(codes.InvalidArgument, "token is required")
+	}
+	token, err := s.auth.GetChatToken(ctx, req.AuthToken)
+	if err != nil {
+		status.Error(codes.Internal, "failed get chat token")
+	}
+	return &auth1.GetChatTokenResponse{ChatToken: token}, nil
 }

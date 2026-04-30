@@ -3,7 +3,7 @@ module tcp-server
 go 1.24.2
 
 require (
-	github.com/MrKrik/protos v0.0.4
+	github.com/MrKrik/protos v0.0.7
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	google.golang.org/grpc v1.80.0

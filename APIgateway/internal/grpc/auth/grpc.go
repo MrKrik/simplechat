@@ -77,3 +77,18 @@ func (c *Client) Register(login string, password string, log *slog.Logger) (errM
 	}
 	return ""
 }
+
+func (c *Client) GetChatToken(authToken string, log *slog.Logger) (errMessage string, token string) {
+	res, err := c.api.GetChatToken(context.Background(), &auth1.GetChatTokenRequest{
+		AuthToken: authToken,
+	})
+	st, ok := status.FromError(err)
+	if ok {
+		switch st.Code() {
+		case codes.InvalidArgument:
+			log.Error(err.Error())
+			return st.Message(), ""
+		}
+	}
+	return res.ChatToken, ""
+}

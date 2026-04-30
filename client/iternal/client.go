@@ -26,6 +26,7 @@ type Client struct {
 	Connection  *websocket.Conn
 	messageChan chan Message
 	token       string
+	chat_token  string
 	Room_id     string
 }
 
@@ -49,22 +50,21 @@ func NewClient(name string) *Client {
 func (c *Client) Start() error {
 	var err error
 
-	// for {
-	// 	if c.token == "" {
-	// 		c.SetToken()
-
-	// 	} else {
-	// 		break
-	// 	}
-	// }
+	for {
+		if c.token == "" {
+			c.SetToken()
+			c.SetChatToken()
+			log.Println(c.chat_token)
+		} else {
+			break
+		}
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	var id string
-	fmt.Scan(&id)
 	var url string
-	url = fmt.Sprintf("ws://localhost:8080/ws?userId=%s", id)
+	url = fmt.Sprintf("ws://localhost:8080/ws?userId=%s", c.chat_token)
 
 	c.Connection, _, err = websocket.Dial(ctx, url, nil)
 	if err != nil {
@@ -165,6 +165,30 @@ func (c *Client) getToken() string {
 	return token
 }
 
+func (c *Client) getChatToken() string {
+	var token string
+
+	data := c.token
+
+	jsonData, _ := json.Marshal(data)
+
+	resp, err := http.Post("http://localhost:8082/getchattoken", "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return ""
+	}
+	defer resp.Body.Close()
+
+	json.NewDecoder(resp.Body).Decode(&token)
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		fmt.Println("Error:", token)
+		return ""
+	}
+
+	return token
+}
+
 func (c *Client) SetToken() {
 	c.token = c.getToken()
 }
@@ -176,4 +200,8 @@ func getLoginAndPassword() string {
 	fmt.Println("Password: ")
 	fmt.Scan(&password)
 	return login + " " + password
+}
+
+func (c *Client) SetChatToken() {
+	c.chat_token = c.getChatToken()
 }

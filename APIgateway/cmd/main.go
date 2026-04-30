@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"tcp-server/internal/config"
 	grpc "tcp-server/internal/grpc/auth"
-	auth "tcp-server/internal/htpp-server/handlers"
+	"tcp-server/internal/htpp-server/handlers"
 	"time"
 
 	"tcp-server/internal/lib/logger/sl"
@@ -41,10 +41,10 @@ func main() {
 	router.Use(middleware.RequestID)
 	router.Use(middleware.Logger)
 
-	router.Post("/login", auth.Login(authclient, log))
-	router.Post("/register", auth.Register(authclient, log))
+	router.Post("/login", handlers.Login(authclient, log))
+	router.Post("/register", handlers.Register(authclient, log))
 
-	// router.Use(mwLogerr.New(log))
+	router.Post("/getchattoken", handlers.GetChatToken(authclient, log))
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)

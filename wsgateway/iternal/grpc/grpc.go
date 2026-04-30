@@ -2,20 +2,17 @@ package grpc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
-	auth1 "github.com/MrKrik/protos/gen/go/auth"
+	validate "github.com/MrKrik/protos/gen/go/validate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Client struct {
-	api auth1.AuthClient
+	api validate.ValidateServiceClient
 }
-
-var ErrUserExists = errors.New("user already exists")
 
 func New(
 	addr string,
@@ -26,27 +23,19 @@ func New(
 		fmt.Println(err)
 	}
 	return &Client{
-		api: auth1.NewAuthClient(conn),
+		api: validate.NewValidateServiceClient(conn),
 	}, nil
 }
 
-func (c *Client) Login(login string, password string) (bool, error) {
-	_, err := c.api.Login(context.Background(), &auth1.LoginRequest{
-		Login:    login,
-		Password: password,
+func (c *Client) ValidateToken(token string) (bool, error) {
+	res, err := c.api.ValidateToken(context.Background(), &validate.ValidateTokenRequest{
+		Token: token,
 	})
 	if err != nil {
-		_, err := c.api.Register(context.Background(), &auth1.RegisterRequest{
-			Login:    login,
-			Password: password,
-		})
-		if errors.Is(err, ErrUserExists) {
-			return false, err
-		}
-		if err != nil {
-			return false, err
-		}
+		return false, err
+	}
+	if res.Success {
 		return true, nil
 	}
-	return true, nil
+	return false, nil
 }
