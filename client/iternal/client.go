@@ -40,7 +40,7 @@ type ChatPayload struct {
 	Text    string `json:"text"`
 }
 
-func NewClient(name string) *Client {
+func NewClient() *Client {
 	return &Client{
 		messageChan: make(chan Message, 50),
 		Room_id:     "general",
@@ -60,11 +60,14 @@ func (c *Client) Start() error {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
+	var userID string
+	fmt.Scan(&userID)
 
 	var url string
-	url = fmt.Sprintf("ws://localhost:8080/ws?userId=%s", c.chat_token)
+	url = fmt.Sprintf("ws://localhost:8080/ws?token=%s&userID=%v", c.chat_token, userID)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
 
 	c.Connection, _, err = websocket.Dial(ctx, url, nil)
 	if err != nil {

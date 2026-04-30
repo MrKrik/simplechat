@@ -137,11 +137,10 @@ func (a *Auth) Login(ctx context.Context, login string, password string, appID i
 }
 
 func (a *Auth) GetChatToken(ctx context.Context, authToken string) (token string, err error) {
-	const op = "auth.Login"
+	const op = "auth.GetChatToken"
 
 	log := a.log.With(
 		slog.String("op", op),
-		slog.String("authToken", authToken),
 	)
 
 	app, err := a.appProvider.App(ctx, 1)

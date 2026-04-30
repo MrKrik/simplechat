@@ -71,3 +71,22 @@ func NewChatToken(login string, app models.App, duration time.Duration) (string,
 
 	return tokenString, nil
 }
+
+func ValidateToken(tokenString string, secret string) (bool, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(secret), nil
+	})
+
+	if err != nil {
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			return false, fmt.Errorf("token expired")
+		}
+		return false, fmt.Errorf("invalid token: %w", err)
+	}
+
+	return token.Valid, nil
+}

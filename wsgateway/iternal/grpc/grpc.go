@@ -7,7 +7,9 @@ import (
 
 	validate "github.com/MrKrik/protos/gen/go/validate"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 type Client struct {
@@ -27,15 +29,19 @@ func New(
 	}, nil
 }
 
-func (c *Client) ValidateToken(token string) (bool, error) {
+func (c *Client) ValidateToken(token string) (ok bool, errMSG string) {
 	res, err := c.api.ValidateToken(context.Background(), &validate.ValidateTokenRequest{
 		Token: token,
 	})
-	if err != nil {
-		return false, err
+	st, ok := status.FromError(err)
+	if ok {
+		switch st.Code() {
+		case codes.InvalidArgument:
+			return false, st.Message()
+		}
 	}
 	if res.Success {
-		return true, nil
+		return true, ""
 	}
-	return false, nil
+	return false, ""
 }

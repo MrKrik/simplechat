@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"math/rand"
 	"net/http"
@@ -25,32 +26,38 @@ func main() {
 	go hub.Run()
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		serveWs(hub, w, r, grpcClient)
+		errMSG := serveWs(hub, w, r, grpcClient)
+		if errMSG != "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(errMSG)
+			return
+		}
 	})
 
 	log.Println("Сервер запущен на :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
-func serveWs(hub *hub.Hub, w http.ResponseWriter, r *http.Request, grpc *grpc.Client) error {
+func serveWs(hub *hub.Hub, w http.ResponseWriter, r *http.Request, grpc *grpc.Client) string {
+
+	token := r.URL.Query().Get("token")
+
+	ok, errMSG := grpc.ValidateToken(token)
+	if !ok {
+		return errMSG
+	}
 
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		InsecureSkipVerify: true,
 	})
 	if err != nil {
 		log.Println(err)
-		return err
-	}
-
-	token := r.URL.Query().Get("token")
-
-	ok, err := grpc.ValidateToken(token)
-	if !ok {
-		return err
+		return err.Error()
 	}
 
 	log.Println("New user", r.RemoteAddr, r.URL.Query().Get("userId"))
 	client := &chub.Client{
-		UserID:     r.URL.Query().Get("userId"), // Передаем в URL: ?userId=user1
+		UserID:     r.URL.Query().Get("userID"), // Передаем в URL: ?userId=user1
 		ConnID:     string(rand.Int31()),
 		Conn:       conn,
 		Send:       make(chan []byte, 256),
@@ -61,6 +68,5 @@ func serveWs(hub *hub.Hub, w http.ResponseWriter, r *http.Request, grpc *grpc.Cl
 
 	go client.WritePump()
 	go client.ReadPump()
-
-	return nil
+	return ""
 }

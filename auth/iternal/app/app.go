@@ -3,6 +3,7 @@ package app
 import (
 	grpcapp "auth/iternal/app/grpc"
 	"auth/iternal/services/auth"
+	"auth/iternal/services/validate"
 	"auth/iternal/storage/sqlite"
 	"log/slog"
 	"time"
@@ -25,7 +26,9 @@ func New(
 	}
 	authService := auth.New(log, storage, storage, storage, tokenTTL, chatTokenTTL)
 
-	grpcApp := grpcapp.New(log, authService, grpcPort)
+	validateService := validate.New(log, storage)
+
+	grpcApp := grpcapp.New(log, authService, validateService, grpcPort)
 
 	return &App{
 		GRPCSrv: grpcApp,

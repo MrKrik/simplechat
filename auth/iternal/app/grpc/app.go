@@ -1,7 +1,8 @@
 package grpcapp
 
 import (
-	authgrpc "auth/iternal/grpc"
+	authgrpc "auth/iternal/grpc/auth"
+	validategrpc "auth/iternal/grpc/validate"
 	"fmt"
 	"log/slog"
 	"net"
@@ -18,11 +19,14 @@ type App struct {
 func New(
 	log *slog.Logger,
 	authService authgrpc.Auth,
+	validateService validategrpc.Validate,
 	port int,
 ) *App {
 	gRPCServer := grpc.NewServer()
 
 	authgrpc.Register(gRPCServer, authService)
+
+	validategrpc.Register(gRPCServer, validateService)
 
 	return &App{
 		log:        log,
