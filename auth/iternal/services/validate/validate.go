@@ -32,7 +32,7 @@ func (v *Validate) ValidateToken(ctx context.Context, token string) (ok bool, er
 
 	log := v.log.With(
 		slog.String("op", op),
-		slog.String("authToken", token),
+		slog.String("chatToken", token),
 	)
 
 	app, err := v.appProvider.App(ctx, 1)

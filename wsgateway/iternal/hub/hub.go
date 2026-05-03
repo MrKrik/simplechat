@@ -68,7 +68,7 @@ func (h *Hub) deliverMessage(msg MessageToBroadcast) {
 	userIDs, ok := h.Rooms[msg.RoomID]
 
 	h.mu.RUnlock()
-
+	log.Println(msg.Text)
 	if !ok {
 		return // Nil room
 	}
@@ -82,7 +82,7 @@ func (h *Hub) deliverMessage(msg MessageToBroadcast) {
 			for _, client := range devices {
 				select {
 				case client.Send <- []byte(msg.Text):
-					log.Println(msg.Text)
+
 				default:
 				}
 			}

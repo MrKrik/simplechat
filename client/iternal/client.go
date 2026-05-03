@@ -48,14 +48,38 @@ func NewClient() *Client {
 }
 
 func (c *Client) Start() error {
+
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
+	err := c.Connect(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	go c.handleKeyboard(ctx)
+
+	go c.handleMessage(ctx)
+
+	defer func() {
+		cancel()
+	}()
+
+	c.Stop(ctx)
+
+	return nil
+}
+
+func (c *Client) Connect(parentCtx context.Context) error {
+
 	var err error
 
 	for {
 		if c.token == "" {
 			c.SetToken()
-			c.SetChatToken()
-			log.Println(c.chat_token)
 		} else {
+			c.SetChatToken()
 			break
 		}
 	}
@@ -66,30 +90,15 @@ func (c *Client) Start() error {
 	var url string
 	url = fmt.Sprintf("ws://localhost:8080/ws?token=%s&userID=%v", c.chat_token, userID)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	dialCtx, cancel := context.WithTimeout(parentCtx, time.Second*10)
 	defer cancel()
 
-	c.Connection, _, err = websocket.Dial(ctx, url, nil)
+	c.Connection, _, err = websocket.Dial(dialCtx, url, nil)
 	if err != nil {
 		fmt.Println("Authorization failed:", err)
 		return err
 	}
-	ctx, cancel = signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
-	go c.handleKeyboard(ctx)
-	go c.handleMessage(ctx)
-	defer func() {
-		cancel()
-		c.Connection.Close(websocket.StatusNormalClosure, "work end")
-	}()
-	c.Stop(ctx)
+
 	return nil
 }
 
@@ -103,15 +112,18 @@ func (c *Client) handleKeyboard(ctx context.Context) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		text, _ := reader.ReadString('\n')
-		c.writeInConnection(text)
+		c.writeInConnection(text, ctx)
 	}
 }
 
 func (c *Client) handleMessage(ctx context.Context) {
 	for {
-		_, message, err := c.Connection.Read(context.TODO())
+		_, message, err := c.Connection.Read(ctx)
 
 		if err != nil {
+			if ctx.Err() != nil || websocket.CloseStatus(err) == websocket.StatusNormalClosure {
+				return
+			}
 			log.Printf("Connection error: %v", err)
 			return
 		}
@@ -124,7 +136,7 @@ func (c *Client) handleMessage(ctx context.Context) {
 	}
 }
 
-func (c *Client) writeInConnection(message string) {
+func (c *Client) writeInConnection(message string, ctx context.Context) {
 
 	payloadData := ChatPayload{
 		Room_id: "general",
@@ -137,7 +149,7 @@ func (c *Client) writeInConnection(message string) {
 		Type:    "chat_message",
 		Payload: json.RawMessage(payloadBytes),
 	}
-	err := wsjson.Write(context.TODO(), c.Connection, msg)
+	err := wsjson.Write(ctx, c.Connection, msg)
 	if err != nil {
 		log.Printf("Failed write message: %v", err)
 	}
