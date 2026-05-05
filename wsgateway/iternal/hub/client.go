@@ -70,13 +70,12 @@ func (c *Client) WritePump() {
 		case <-ticker.C:
 			// Send ping for continuation of connection
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-			c.Conn.Read(ctx)
+			defer cancel()
 			if err := c.Conn.Ping(ctx); err != nil {
 				log.Printf("Ping failed: %v", err)
-				cancel()
 				return
 			}
-			cancel()
+
 		}
 	}
 }

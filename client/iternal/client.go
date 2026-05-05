@@ -5,11 +5,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -17,17 +20,13 @@ import (
 	"github.com/coder/websocket/wsjson"
 )
 
-type Message struct {
-	Author string
-	Text   string
-}
-
 type Client struct {
-	Connection  *websocket.Conn
-	messageChan chan Message
-	token       string
-	chat_token  string
-	Room_id     string
+	Connection    *websocket.Conn
+	UserID        string
+	token         string
+	chat_token    string
+	Room_id       string
+	ServiceCancel context.CancelFunc
 }
 
 type ClientMessage struct {
@@ -42,13 +41,12 @@ type ChatPayload struct {
 
 func NewClient() *Client {
 	return &Client{
-		messageChan: make(chan Message, 50),
-		Room_id:     "general",
+		Room_id: "general",
 	}
 }
 
 func (c *Client) Start() error {
-
+	fmt.Scan(&c.UserID)
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
@@ -57,10 +55,6 @@ func (c *Client) Start() error {
 	if err != nil {
 		return err
 	}
-
-	go c.handleKeyboard(ctx)
-
-	go c.handleMessage(ctx)
 
 	defer func() {
 		cancel()
@@ -84,11 +78,8 @@ func (c *Client) Connect(parentCtx context.Context) error {
 		}
 	}
 
-	var userID string
-	fmt.Scan(&userID)
-
 	var url string
-	url = fmt.Sprintf("ws://localhost:8080/ws?token=%s&userID=%v", c.chat_token, userID)
+	url = fmt.Sprintf("ws://localhost:8080/ws?token=%s&userID=%v", c.chat_token, c.UserID)
 
 	dialCtx, cancel := context.WithTimeout(parentCtx, time.Second*10)
 	defer cancel()
@@ -98,6 +89,16 @@ func (c *Client) Connect(parentCtx context.Context) error {
 		fmt.Println("Authorization failed:", err)
 		return err
 	}
+
+	log.Printf("Connected to server: %s", url)
+
+	serviceCtx, serviceCancel := context.WithCancel(parentCtx)
+
+	c.ServiceCancel = serviceCancel
+
+	go c.handleKeyboard(serviceCtx)
+
+	go c.handleMessage(serviceCtx)
 
 	return nil
 }
@@ -111,27 +112,65 @@ func (c *Client) Stop(ctx context.Context) {
 func (c *Client) handleKeyboard(ctx context.Context) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
 		text, _ := reader.ReadString('\n')
+
+		text = strings.TrimSpace(text)
+
+		if text == "" {
+			continue
+		}
+
+		if text == "/re" {
+			c.Reconnect(ctx)
+			continue
+		}
+
 		c.writeInConnection(text, ctx)
+	}
+}
+
+func (c *Client) Reconnect(ctx context.Context) {
+	c.Connection.CloseNow()
+	err := c.Connect(ctx)
+	if err != nil {
+		log.Println(err.Error())
 	}
 }
 
 func (c *Client) handleMessage(ctx context.Context) {
 	for {
-		_, message, err := c.Connection.Read(ctx)
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+		msgType, message, err := c.Connection.Read(ctx)
 
 		if err != nil {
+
+			if errors.Is(err, io.EOF) {
+				log.Println("f")
+				c.Reconnect(ctx)
+				return
+			}
+
 			if ctx.Err() != nil || websocket.CloseStatus(err) == websocket.StatusNormalClosure {
 				return
 			}
 			log.Printf("Connection error: %v", err)
 			return
 		}
+		if msgType == websocket.MessageText {
+			message = bytes.TrimSpace(message)
 
-		message = bytes.TrimSpace(message)
-
-		if len(message) > 0 {
-			fmt.Println(string(message))
+			if len(message) > 0 {
+				fmt.Println(string(message))
+			}
 		}
 	}
 }
