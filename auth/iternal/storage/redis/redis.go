@@ -20,9 +20,9 @@ func NewTokenStore(ctx context.Context, cfg config.RedisConfig) (*TokenStore, er
 		DB:           cfg.DB,
 		Username:     cfg.User,
 		MaxRetries:   cfg.MaxRetries,
-		DialTimeout:  cfg.DialTimeout,
-		ReadTimeout:  cfg.Timeout,
-		WriteTimeout: cfg.Timeout,
+		DialTimeout:  time.Duration(cfg.DialTimeout) * time.Second,
+		ReadTimeout:  time.Duration(cfg.Timeout) * time.Second,
+		WriteTimeout: time.Duration(cfg.Timeout) * time.Second,
 	})
 
 	if err := db.Ping(ctx).Err(); err != nil {

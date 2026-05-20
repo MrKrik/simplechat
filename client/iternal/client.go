@@ -88,7 +88,7 @@ func (c *Client) Registration(ctx context.Context) string {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusUnauthorized {
+	if resp.StatusCode != http.StatusOK {
 		log.Println("Error:", resp.Status)
 		return "Registration failed with error: " + resp.Status
 	}
@@ -103,7 +103,7 @@ func (c *Client) Connect(parentCtx context.Context) error {
 	for {
 		select {
 		case <-parentCtx.Done():
-			return nil
+			return errors.New("return from connect")
 		default:
 		}
 		if c.token == "" {

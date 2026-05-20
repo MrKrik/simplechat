@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  apigateway:
+    build:
+      context: ./APIgateway
+      dockerfile: Dockerfile
+    container_name: apigateway
+    ports:
+      - "8082:8082"
+    environment:
+      - SERVICE_NAME=apigateway
+      - CONFIG_PATH=/root/config/local.yaml
+    networks:
+      - simplechat-network
+    depends_on:
+      - auth
+      - wsgateway
+
+  auth:
+    build:
+      context: ./auth
+      dockerfile: Dockerfile
+    container_name: auth
+    ports:
+      - "8081:44044"
+    environment:
+      - SERVICE_NAME=auth
+      - CONFIG_PATH=/root/config/local.yaml
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - simplechat-network
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  wsgateway:
+    build:
+      context: ./wsgateway
+      dockerfile: Dockerfile
+    container_name: wsgateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVICE_NAME=wsgateway
+    networks:
+      - simplechat-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - simplechat-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - redis_data:/data
+
+networks:
+  simplechat-network:
+    driver: bridge
+
+volumes:
+  redis_data:
