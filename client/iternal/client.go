@@ -101,6 +101,11 @@ func (c *Client) Connect(parentCtx context.Context) error {
 	var err error
 
 	for {
+		select {
+		case <-parentCtx.Done():
+			return nil
+		default:
+		}
 		if c.token == "" {
 			c.SetToken()
 		} else {
