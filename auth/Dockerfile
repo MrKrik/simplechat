@@ -29,4 +29,4 @@ RUN mkdir -p /root/storage
 
 EXPOSE 44044
 
-CMD ["sh", "-c", "./migrator -storage-path /root/storage/auth.db -migrations-path /root/migrations && ./auth -config /root/config/local.yaml"]
+CMD ["sh", "-c", "./migrator -storage-path /root/storage/auth.db -migrations-path /root/migrations && ./auth -config /root/config/prod.yaml"]

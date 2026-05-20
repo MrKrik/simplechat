@@ -20,4 +20,4 @@ COPY --from=builder /app/config ./config
 
 EXPOSE 8082
 
-CMD ["./apigateway", "-config", "/root/config/local.yaml"]
+CMD ["./apigateway", "-config", "/root/config/prod.yaml"]

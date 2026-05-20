@@ -10,7 +10,7 @@ services:
       - "8082:8082"
     environment:
       - SERVICE_NAME=apigateway
-      - CONFIG_PATH=/root/config/local.yaml
+      - CONFIG_PATH=/root/config/prod.yaml
     networks:
       - simplechat-network
     depends_on:
@@ -26,7 +26,7 @@ services:
       - "8081:44044"
     environment:
       - SERVICE_NAME=auth
-      - CONFIG_PATH=/root/config/local.yaml
+      - CONFIG_PATH=/root/config/prod.yaml
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     networks:
