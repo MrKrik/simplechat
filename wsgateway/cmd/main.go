@@ -16,7 +16,7 @@ import (
 func main() {
 	hub := chub.NewHub()
 
-	grpcClient, err := grpc.New(":44044", time.Duration(time.Duration.Minutes(1)))
+	grpcClient, err := grpc.New(":44044", time.Duration(10*time.Second))
 	if err != nil {
 		log.Println("failed start grpc client")
 	}
@@ -42,10 +42,14 @@ func serveWs(hub *hub.Hub, w http.ResponseWriter, r *http.Request, grpc *grpc.Cl
 
 	token := r.URL.Query().Get("token")
 
+	log.Println("Try validate token")
+
 	ok, errMSG := grpc.ValidateToken(token)
 	if !ok {
+		log.Println("Validate token failed")
 		return errMSG
 	}
+	log.Println("Try validate successfully")
 
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		InsecureSkipVerify: true,

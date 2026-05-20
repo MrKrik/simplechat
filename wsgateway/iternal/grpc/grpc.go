@@ -13,7 +13,8 @@ import (
 )
 
 type Client struct {
-	api validate.ValidateServiceClient
+	api     validate.ValidateServiceClient
+	timeout time.Duration
 }
 
 func New(
@@ -25,12 +26,15 @@ func New(
 		fmt.Println(err)
 	}
 	return &Client{
-		api: validate.NewValidateServiceClient(conn),
+		api:     validate.NewValidateServiceClient(conn),
+		timeout: timeout,
 	}, nil
 }
 
 func (c *Client) ValidateToken(token string) (ok bool, errMSG string) {
-	res, err := c.api.ValidateToken(context.Background(), &validate.ValidateTokenRequest{
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	res, err := c.api.ValidateToken(ctx, &validate.ValidateTokenRequest{
 		Token: token,
 	})
 	st, ok := status.FromError(err)

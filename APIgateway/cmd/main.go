@@ -33,7 +33,7 @@ func main() {
 
 	router := chi.NewRouter()
 
-	authclient, err := grpc.New(cfg.AuthGRPC.Address, time.Duration(60))
+	authclient, err := grpc.New(cfg.AuthGRPC.Address, time.Duration(60*time.Second))
 	if err != nil {
 		log.Error("Failed connect auth server")
 	}

@@ -7,8 +7,14 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/mattn/go-sqlite3 v1.14.22
+	github.com/redis/go-redis/v9 v9.19.0
 	golang.org/x/crypto v0.47.0
 	google.golang.org/grpc v1.80.0
+)
+
+require (
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	go.uber.org/atomic v1.11.0 // indirect
 )
 
 require (
@@ -19,7 +25,6 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.6.0 // indirect
-	// github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/joho/godotenv v1.5.1 // indirect
 	golang.org/x/net v0.49.0 // indirect

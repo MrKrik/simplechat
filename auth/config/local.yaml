@@ -3,3 +3,11 @@ storage_path: "./storage/auth.db"
 grpc:
   port: 44044
   timeout: 1h
+redis:
+  addr: "localhost:6379"
+  password: ""
+  user: ""
+  db: 0
+  max_retries: 5
+  dial_timeout: 10
+  timeout: 5

@@ -15,12 +15,13 @@ import (
 )
 
 type Auth struct {
-	log          *slog.Logger
-	usrSaver     UserSaver
-	usrProvider  UserProvider
-	appProvider  AppProvider
-	tokenTTL     time.Duration
-	ChatTokenTTL time.Duration
+	log           *slog.Logger
+	usrSaver      UserSaver
+	usrProvider   UserProvider
+	appProvider   AppProvider
+	tokenTTL      time.Duration
+	ChatTokenTTL  time.Duration
+	tokenProvider TokenProvider
 }
 
 var (
@@ -39,6 +40,10 @@ type UserProvider interface {
 	User(ctx context.Context, login string) (models.User, error)
 }
 
+type TokenProvider interface {
+	SaveToken(ctx context.Context, key string, value string, ttl time.Duration) error
+}
+
 type AppProvider interface {
 	App(ctx context.Context, appID int) (models.App, error)
 }
@@ -50,14 +55,16 @@ func New(
 	appProvider AppProvider,
 	tokenTTL time.Duration,
 	chatTokenTTL time.Duration,
+	tokenProvider TokenProvider,
 ) *Auth {
 	return &Auth{
-		usrSaver:     userSaver,
-		usrProvider:  userProvider,
-		log:          log,
-		appProvider:  appProvider,
-		tokenTTL:     tokenTTL,
-		ChatTokenTTL: chatTokenTTL,
+		usrSaver:      userSaver,
+		usrProvider:   userProvider,
+		log:           log,
+		appProvider:   appProvider,
+		tokenTTL:      tokenTTL,
+		ChatTokenTTL:  chatTokenTTL,
+		tokenProvider: tokenProvider,
 	}
 }
 
@@ -155,14 +162,18 @@ func (a *Auth) GetChatToken(ctx context.Context, authToken string) (token string
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	log.Info("generate chat token")
+	log.Info("generate chat token for %s", login)
 
 	token, err = jwt.NewChatToken(login, app, a.ChatTokenTTL)
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	log.Info("generate chat token successfully")
+	err = a.tokenProvider.SaveToken(ctx, token, login, a.ChatTokenTTL)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+	log.Info("generate chat token successfully for %s", login)
 
 	return token, nil
 }

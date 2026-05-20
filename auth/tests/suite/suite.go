@@ -8,14 +8,16 @@ import (
 	"testing"
 
 	auth1 "github.com/MrKrik/protos/gen/go/auth"
+	val1 "github.com/MrKrik/protos/gen/go/validate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Suite struct {
 	*testing.T
-	Cfg        *config.Config
-	AuthClient auth1.AuthClient
+	Cfg            *config.Config
+	AuthClient     auth1.AuthClient
+	ValidateClient val1.ValidateServiceClient
 }
 
 const grpcHost = "localhost"
