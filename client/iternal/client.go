@@ -54,6 +54,7 @@ func (c *Client) Start() error {
 		fmt.Println("Type 'connect' to connect to the chat, 'reg' to register, or 'exit' to quit:")
 		fmt.Scan(&cm)
 		if cm == "exit" {
+			cancel()
 			break
 		}
 		if cm == "connect" {
@@ -68,10 +69,6 @@ func (c *Client) Start() error {
 			fmt.Println(token)
 		}
 	}
-
-	defer func() {
-		cancel()
-	}()
 
 	c.Stop(ctx)
 
@@ -137,8 +134,11 @@ func (c *Client) Connect(parentCtx context.Context) error {
 
 func (c *Client) Stop(ctx context.Context) {
 	<-ctx.Done()
-	log.Println("Exit")
-	c.Connection.Close(websocket.StatusNormalClosure, "work end")
+	fmt.Println("Exit")
+	if c.Connection != nil {
+		c.ServiceCancel()
+		c.Connection.Close(websocket.StatusNormalClosure, "client stopped")
+	}
 }
 
 func (c *Client) handleKeyboard(ctx context.Context) {
