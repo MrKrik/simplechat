@@ -22,7 +22,7 @@ import (
 
 type Client struct {
 	Connection    *websocket.Conn
-	UserID        string
+	Login         string
 	token         string
 	chat_token    string
 	Room_id       string
@@ -46,14 +46,27 @@ func NewClient() *Client {
 }
 
 func (c *Client) Start() error {
-	fmt.Scan(&c.UserID)
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	err := c.Connect(ctx)
-
-	if err != nil {
-		return err
+	for {
+		var cm string
+		fmt.Println("Type 'connect' to connect to the chat, 'reg' to register, or 'exit' to quit:")
+		fmt.Scan(&cm)
+		if cm == "exit" {
+			break
+		}
+		if cm == "connect" {
+			err := c.Connect(ctx)
+			if err != nil {
+				log.Println(err.Error())
+			}
+			break
+		}
+		if cm == "reg" {
+			token := c.Registration(ctx)
+			fmt.Println(token)
+		}
 	}
 
 	defer func() {
@@ -63,6 +76,27 @@ func (c *Client) Start() error {
 	c.Stop(ctx)
 
 	return nil
+}
+
+func (c *Client) Registration(ctx context.Context) string {
+	msg := getLoginAndPassword()
+
+	data := msg
+	jsonData, _ := json.Marshal(data)
+
+	resp, err := http.Post("http://localhost:8082/register", "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Println("Error: ", err)
+		return "Registration failed with error: " + err.Error()
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		log.Println("Error:", resp.Status)
+		return "Registration failed with error: " + resp.Status
+	}
+
+	return "Registration successful"
 }
 
 func (c *Client) Connect(parentCtx context.Context) error {
@@ -79,7 +113,7 @@ func (c *Client) Connect(parentCtx context.Context) error {
 	}
 
 	var url string
-	url = fmt.Sprintf("ws://localhost:8080/ws?token=%s&userID=%v", c.chat_token, c.UserID)
+	url = fmt.Sprintf("ws://localhost:8080/ws?token=%s&login=%s", c.chat_token, c.Login)
 
 	dialCtx, cancel := context.WithTimeout(parentCtx, time.Second*10)
 	defer cancel()
@@ -89,8 +123,6 @@ func (c *Client) Connect(parentCtx context.Context) error {
 		fmt.Println("Authorization failed:", err)
 		return err
 	}
-
-	log.Printf("Connected to server: %s", url)
 
 	serviceCtx, serviceCancel := context.WithCancel(parentCtx)
 
@@ -154,7 +186,6 @@ func (c *Client) handleMessage(ctx context.Context) {
 		if err != nil {
 
 			if errors.Is(err, io.EOF) {
-				log.Println("f")
 				c.Reconnect(ctx)
 				return
 			}

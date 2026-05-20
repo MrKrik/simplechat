@@ -59,9 +59,9 @@ func serveWs(hub *hub.Hub, w http.ResponseWriter, r *http.Request, grpc *grpc.Cl
 		return err.Error()
 	}
 
-	log.Println("New user", r.RemoteAddr, r.URL.Query().Get("userId"))
+	log.Println("New user", r.RemoteAddr, r.URL.Query().Get("login"))
 	client := &chub.Client{
-		UserID:     r.URL.Query().Get("userID"), // Передаем в URL: ?userId=user1
+		UserID:     r.URL.Query().Get("login"), // Передаем в URL: ?login=user1
 		ConnID:     string(rand.Int31()),
 		Conn:       conn,
 		Send:       make(chan []byte, 256),
