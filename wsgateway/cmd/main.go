@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net/http"
 	"time"
+	"wsgateway/iternal/config"
 	"wsgateway/iternal/grpc"
 	"wsgateway/iternal/hub"
 	chub "wsgateway/iternal/hub"
@@ -14,9 +15,12 @@ import (
 )
 
 func main() {
+
+	cfg := config.MustLoad()
+
 	hub := chub.NewHub()
 
-	grpcClient, err := grpc.New(":44044", time.Duration(10*time.Second))
+	grpcClient, err := grpc.New(cfg.GRPC.Address, cfg.GRPC.Timeout)
 	if err != nil {
 		log.Println("failed start grpc client")
 	}
@@ -35,8 +39,8 @@ func main() {
 		}
 	})
 
-	log.Println("Сервер запущен на :8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Println("Сервер запущен на " + cfg.HTTPServer.Address)
+	log.Fatal(http.ListenAndServe(cfg.HTTPServer.Address, nil))
 }
 func serveWs(hub *hub.Hub, w http.ResponseWriter, r *http.Request, grpc *grpc.Client) string {
 

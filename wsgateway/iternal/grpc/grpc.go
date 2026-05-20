@@ -37,6 +37,9 @@ func (c *Client) ValidateToken(token string) (ok bool, errMSG string) {
 	res, err := c.api.ValidateToken(ctx, &validate.ValidateTokenRequest{
 		Token: token,
 	})
+	if err != nil {
+		return false, err.Error()
+	}
 	st, ok := status.FromError(err)
 	if ok {
 		switch st.Code() {
@@ -46,6 +49,7 @@ func (c *Client) ValidateToken(token string) (ok bool, errMSG string) {
 	}
 	if res.Success {
 		return true, ""
+	} else {
+		return false, ""
 	}
-	return false, ""
 }

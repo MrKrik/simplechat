@@ -6,7 +6,7 @@ echo Starting services...
 :: Запускаем сервисы и присваиваем окнам уникальный префикс "SRV_"
 start "SRV_API_Gateway" cmd /k "cd APIgateway && go run ./cmd/main.go --config=./config/local.yaml"
 start "SRV_Auth_Service" cmd /k "cd auth && go run ./cmd/auth/main.go --config=./config/local.yaml"
-start "SRV_WS_Gateway" cmd /k "cd wsgateway && go run ./cmd/main.go"
+start "SRV_WS_Gateway" cmd /k "cd wsgateway && go run ./cmd/main.go --config=./config/local.yaml" 
 
 echo.
 echo All services are running in separate windows.
