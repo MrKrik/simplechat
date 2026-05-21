@@ -16,7 +16,8 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 
 COPY --from=builder /app/wsgateway .
+COPY --from=builder /app/config ./config
 
 EXPOSE 8080
 
-CMD ["./wsgateway"]
+CMD ["sh", "-c","./wsgateway -config /root/config/prod.yaml"]
