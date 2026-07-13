@@ -1,0 +1,1 @@
+start "SRV_API_Gateway" cmd /k "cd APIgateway && go run ./cmd/main.go --config=./config/local.yaml"

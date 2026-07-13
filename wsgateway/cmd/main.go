@@ -42,6 +42,7 @@ func main() {
 	log.Println("Сервер запущен на " + cfg.HTTPServer.Address)
 	log.Fatal(http.ListenAndServe(cfg.HTTPServer.Address, nil))
 }
+
 func serveWs(hub *hub.Hub, w http.ResponseWriter, r *http.Request, grpc *grpc.Client) string {
 
 	token := r.URL.Query().Get("token")

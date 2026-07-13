@@ -1,0 +1,1 @@
+start "SRV_Auth_Service" cmd /k "cd auth && go run ./cmd/auth/main.go --config=./config/local.yaml"
